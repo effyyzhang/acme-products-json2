@@ -1,0 +1,96 @@
+<html>
+  <head>
+    <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js'></script>
+<style>
+body {
+  font-family: verdana;
+}
+input, button{
+  height: 2rem;
+}
+.error {
+  color: red;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+}
+</style>
+  </head>
+  <body>
+    <div id='root'></div>
+    <script type='text/babel'>
+      class App extends React.Component{
+        constructor(){
+          super();
+          this.state = {
+            products: [],
+            name: '',
+            price: '',
+            error: ''
+          };
+          this.create = this.create.bind(this)
+          this.destroy = this.destroy.bind(this)
+        }
+        async componentDidMount(){
+          this.setState({ products: ( await axios.get('/api/products')).data});
+        }
+        async create(){
+            const{products, name, price, error} = this.state;
+            this.setState({error: ''});
+            try{
+              const product = (await axios.post(('/api/products/create'), {name:name, price:price})).data;
+              this.setState({ products: [...products, product], name: '', price: '' })
+            }
+            catch(ex){
+              this.setState({error: ex.response.data.message})
+            }
+          }
+
+        async destroy(id){
+          const{products, name} = this.state;
+          this.setState({ error: '' });
+          try{
+            const _products = products.filter(product => product.id != id)
+            this.setState({products: _products})
+            await axios.post(('/api/products/delete'), {id})
+          }
+          catch(ex){
+            this.setState({error: ex.response.data.message})
+          }
+        }
+
+
+        render(){
+          const { products, name, price, error } = this.state;
+          const {create, destroy} = this;
+
+          return (
+            <div>
+              <h1>Acme Products</h1>
+              { error && <div className='error'>{ error }</div> }
+              <div className='form'>
+                <input name='Product Name' value={name} placeholder='Product Name' onChange={ ev => this.setState({ name: ev.target.value })}/>
+                <input name='Product Price'value={price} placeholder='Product Price' onChange={ ev => this.setState({ price: ev.target.value })}/>
+                <button onClick={create} >Create</button>
+              </div>
+              <ul>
+                {
+                  products.map(product =>
+                  <li key={product.id} onClick={()=>{destroy(product.id)}}>
+                    { product.name}
+                  </li>)
+                }
+              </ul>
+            </div>
+          );
+        }
+      }
+      ReactDOM.render(<App />, document.querySelector('#root'));
+    </script>
+  </body>
+</html>
+
